@@ -6,10 +6,9 @@ sed 's/CFLAGS = -O3 -fomit-frame-pointer/CFLAGS = -O3 -fPIC -fomit-frame-pointer
 echo "rebuilding libcuba.a archive"
 make -B libcuba.a
 echo "unpacking libcuba.a"
-FILES=$(ar xv libcuba.a |sed 's/x - //g')
+FILES=$(ar xv libcuba.a | sed 's/x - //g' | fgrep -v "__.SYMDEF")
 echo "making libcuba.so"
 echo gcc -shared -Wall $FILES -lm -o libcuba.so
 gcc -shared -Wall $FILES -lm -o libcuba.so
 rm $FILES
-
 
