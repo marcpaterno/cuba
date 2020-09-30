@@ -26,5 +26,7 @@ if [[ "${os_string}" == "Darwin" ]]; then
 fi
 
 gcc -shared -Wall $FILES -lm -o ${LIBNAME}
-rm $FILES
+rm -f $FILES
+rm -f __.SYMDEF\ SORTED
+rm -f libcuba.a
 
