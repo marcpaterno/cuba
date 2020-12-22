@@ -1,8 +1,9 @@
 CC = @CC@
-CFLAGS = @CFLAGS@ @DEFS@ -I$(common) -I. -I$(srcdir)
+SUFFIX = @SUFFIX@
+CFLAGS = @CFLAGS@ @DEFS@ -DREALSIZE=@REALSIZE@ -I$(common) -I. -I$(srcdir)
 MCFLAGS = @MCFLAGS@
-F77 = @F77@
-FFLAGS = @FFLAGS@
+FC = @FC@
+FCFLAGS = @FCFLAGS@ -DREALSIZE=@REALSIZE@
 LIBS = @LIBS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
@@ -24,21 +25,21 @@ TOOLS_DEFAULT = @TOOLS_DEFAULT@
 DEMO_FORTRAN_DEFAULT = @DEMO_FORTRAN_DEFAULT@$(EXE)
 
 MCC = CC="$(tools)/fcc" CXX="$(tools)/fcc @MCSTDCPP@" \
-  REALCC="$(CC)" PATH="$(PATH):$(tools)" mcc
+  REALCC="$(CC)" REALCXX="$(CXX)" PATH="$(PATH):$(tools)" mcc
 
 TARDIR = @PACKAGE_NAME@-@PACKAGE_VERSION@
 TARFILE = $(TARDIR).tar.gz
 
 
-HEADERS = cuba.h
-LIB = libcuba.a
-MATH = Vegas$(EXE) Suave$(EXE) Divonne$(EXE) Cuhre$(EXE)
+HEADERS = cuba$(SUFFIX).h
+LIB = libcuba$(SUFFIX).a
+MATH = Vegas$(SUFFIX)$(EXE) Suave$(SUFFIX)$(EXE) Divonne$(SUFFIX)$(EXE) Cuhre$(SUFFIX)$(EXE)
 TOOLS = partview$(EXE)
 
 
 all: lib demos $(MATH_DEFAULT) $(TOOLS_DEFAULT)
 
-lib: $(LIB)
+lib: $(LIB) $(HEADERS)
 
 demos: demo-c$(EXE) $(DEMO_FORTRAN_DEFAULT)
 
@@ -84,9 +85,11 @@ COMMON_DEPS = $(common)/stddecl.h $(common)/ChiSquare.c $(common)/Erf.c
 COMMON_CDEPS = $(COMMON_DEPS) $(common)/CSample.c $(common)/Parallel.c $(common)/sock.h
 COMMON_TMDEPS = $(COMMON_DEPS) $(common)/MSample.c
 
+RNG_DEPS = $(common)/Random.c $(common)/KorobovCoeff.c
+
 VEGAS_C = $(vegas)/Vegas.c
 VEGAS_TM = $(vegas)/Vegas.tm
-VEGAS_DEPS = $(common)/Random.c \
+VEGAS_DEPS = $(RNG_DEPS) \
   $(vegas)/decl.h $(vegas)/common.c \
   $(vegas)/Grid.c $(vegas)/Integrate.c
 VEGAS = $(VEGAS_C) $(VEGAS_TM) $(VEGAS_DEPS)
@@ -115,10 +118,18 @@ Vegas$(EXE): config.h $(VEGAS_TM) $(VEGAS_DEPS) $(COMMON_TMDEPS)
 	$(MCC) $(MCFLAGS) $(CFLAGS) -I$(vegas) -o Vegas$(EXE) $(VEGAS_TM)
 	strip Vegas$(EXE)
 
+Vegasl$(EXE): config.h $(VEGAS_TM) $(VEGAS_DEPS) $(COMMON_TMDEPS)
+	sed '/:Begin:/,/:End:/ s/Real64/Real128/g' $(VEGAS_TM) > Vegasl.tm
+	$(MCC) $(MCFLAGS) $(CFLAGS) -I$(vegas) -o Vegasl$(EXE) Vegasl.tm
+	strip Vegasl$(EXE)
+	$(RM) Vegasl.tm
+
+Vegasq$(EXE):
+
 
 SUAVE_C = $(suave)/Suave.c
 SUAVE_TM = $(suave)/Suave.tm
-SUAVE_DEPS = $(common)/Random.c \
+SUAVE_DEPS = $(RNG_DEPS) \
   $(suave)/decl.h $(suave)/common.c \
   $(suave)/Grid.c $(suave)/Fluct.c $(suave)/Sample.c \
   $(suave)/Integrate.c
@@ -148,12 +159,20 @@ Suave$(EXE): config.h $(SUAVE_TM) $(SUAVE_DEPS) $(COMMON_TMDEPS)
 	$(MCC) $(MCFLAGS) $(CFLAGS) -I$(suave) -o Suave$(EXE) $(SUAVE_TM)
 	strip Suave$(EXE)
 
+Suavel$(EXE): config.h $(SUAVE_TM) $(SUAVE_DEPS) $(COMMON_TMDEPS)
+	sed '/:Begin:/,/:End:/ s/Real64/Real128/g' $(SUAVE_TM) > Suavel.tm
+	$(MCC) $(MCFLAGS) $(CFLAGS) -I$(suave) -o Suavel$(EXE) Suavel.tm
+	strip Suavel$(EXE)
+	$(RM) Suavel.tm
+
+Suaveq$(EXE):
+
 
 DIVONNE_C = $(divonne)/Divonne.c
 DIVONNE_TM = $(divonne)/Divonne.tm
-DIVONNE_DEPS = $(common)/Random.c \
+DIVONNE_DEPS = $(RNG_DEPS) \
   $(divonne)/decl.h $(divonne)/common.c \
-  $(divonne)/KorobovCoeff.c $(divonne)/Rule.c $(divonne)/Sample.c \
+  $(divonne)/Rule.c $(divonne)/Sample.c \
   $(divonne)/FindMinimum.c $(divonne)/Iterate.c $(divonne)/Explore.c \
   $(divonne)/Split.c $(divonne)/Integrate.c
 DIVONNE = $(DIVONNE_C) $(DIVONNE_TM) $(DIVONNE_DEPS)
@@ -181,6 +200,14 @@ $(LIB)(llDivonne_.o): config.h $(DIVONNE_C) $(DIVONNE_DEPS) $(COMMON_CDEPS)
 Divonne$(EXE): config.h $(DIVONNE_TM) $(DIVONNE_DEPS) $(COMMON_TMDEPS)
 	$(MCC) $(MCFLAGS) $(CFLAGS) -I$(divonne) -o Divonne$(EXE) $(DIVONNE_TM)
 	strip Divonne$(EXE)
+
+Divonnel$(EXE): config.h $(DIVONNE_TM) $(DIVONNE_DEPS) $(COMMON_TMDEPS)
+	sed '/:Begin:/,/:End:/ s/Real64/Real128/g' $(DIVONNE_TM) > Divonnel.tm
+	$(MCC) $(MCFLAGS) $(CFLAGS) -I$(divonne) -o Divonnel$(EXE) Divonnel.tm
+	strip Divonnel$(EXE)
+	$(RM) Divonnel.tm
+
+Divonneq$(EXE):
 
 
 CUHRE_C = $(cuhre)/Cuhre.c
@@ -213,6 +240,14 @@ $(LIB)(llCuhre_.o): config.h $(CUHRE_C) $(CUHRE_DEPS) $(COMMON_CDEPS)
 Cuhre$(EXE): config.h $(CUHRE_TM) $(CUHRE_DEPS) $(COMMON_TMDEPS)
 	$(MCC) $(MCFLAGS) $(CFLAGS) -I$(cuhre) -o Cuhre$(EXE) $(CUHRE_TM)
 	strip Cuhre$(EXE)
+
+Cuhrel$(EXE): config.h $(CUHRE_TM) $(CUHRE_DEPS) $(COMMON_TMDEPS)
+	sed '/:Begin:/,/:End:/ s/Real64/Real128/g' $(CUHRE_TM) > Cuhrel.tm
+	$(MCC) $(MCFLAGS) $(CFLAGS) -I$(cuhre) -o Cuhrel$(EXE) Cuhrel.tm
+	strip Cuhrel$(EXE)
+	$(RM) Cuhrel.tm
+
+Cuhreq$(EXE):
 
 
 $(LIB)(Fork.o): $(common)/Fork.c $(common)/stddecl.h $(common)/sock.h
@@ -257,15 +292,22 @@ $(LIB): $(LIB)(Vegas.o)     $(LIB)(Vegas_.o)     \
 	-$(RANLIB) $(LIB)
 
 
+cubal.h: cuba.h
+	sed 's/double/long double/g' cuba.h > cubal.h
+
+cubaq.h: cuba.h
+	sed 's/double/__float128/g' cuba.h > cubaq.h
+
+
 DEMO_F = $(demo)/demo-fortran.F
 DEMO_C = $(demo)/demo-c.c
 DEMO_TM = $(demo)/demo-math.m $(demo)/testsuite.m
 DEMO = $(DEMO_F) $(DEMO_C) $(DEMO_TM) $(demo)/demo-c.out $(demo)/cuba.F
 
-demo-fortran$(EXE): $(DEMO_F) $(LIB)
-	$(F77) $(FFLAGS) -o demo-fortran$(EXE) $(DEMO_F) $(LIB) $(LIBS)
+demo-fortran$(EXE): $(DEMO_F) lib
+	$(FC) $(FCFLAGS) -o demo-fortran$(EXE) $(DEMO_F) $(LIB) $(LIBS)
 
-demo-c$(EXE): $(DEMO_C) $(srcdir)/cuba.h $(LIB)
+demo-c$(EXE): $(DEMO_C) $(srcdir)/cuba.h lib
 	$(CC) $(CFLAGS) -o demo-c$(EXE) $(DEMO_C) $(LIB) $(LIBS)
 
 
@@ -284,9 +326,9 @@ TARCONTENTS = $(srcdir)/COPYING $(srcdir)/ChangeLog \
   $(srcdir)/config.sub $(srcdir)/config.guess $(srcdir)/install-sh \
   $(srcdir)/makefile.in $(srcdir)/config.h.in \
   $(srcdir)/cuba.pdf $(srcdir)/cuba.tex $(srcdir)/cuba.h \
-  $(COMMON_CDEPS) $(COMMON_TMDEPS) \
+  $(COMMON_CDEPS) $(COMMON_TMDEPS) $(common)/KorobovCoeff.c-* \
   $(common)/Global.c $(common)/Fork.c $(common)/Data.c \
-  $(VEGAS) $(SUAVE) $(DIVONNE) $(divonne)/KorobovCoeff.c-* $(CUHRE) \
+  $(VEGAS) $(SUAVE) $(DIVONNE) $(CUHRE) \
   $(DEMO) $(PARTVIEW) $(tools)/partview.m \
   $(tools)/mcc $(tools)/fcc $(tools)/mkstatic $(tools)/mkdist.c
 
@@ -300,13 +342,16 @@ dist:
 #	$(RM) $(TARDIR)
 
 pub: dist
-	mv -f $(TARFILE) web/
+	new=`date -r $(TARFILE) +%F`; \
+	old=`date -r web/cuba/$(TARFILE) +%F`; \
+	  test $$new = $$old || mv -f web/cuba/$(TARDIR){,_$$old}.tar.gz
+	mv -f $(TARFILE) web/cuba/
 	./mkwebpage
 
 clean:
 	-$(RM) $(TARFILE) $(TARDIR) demo-c.out \
 	  partview.moc partview.o makefile.partview \
-	  *.o */*.o */*.tm.c
+	  cubal.h cubaq.h *.o */*.o */*.tm.c *.tm
 
 distclean: clean
 	-$(RM) $(LIB) demo-c demo-fortran $(MATH) $(TOOLS) \
